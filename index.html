@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MP3 轉 MP4｜KTV 歌詞影片製作</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>🎤 MP3 → MP4 · KTV 歌詞影片製作</h1>
+    <span id="formatBadge" class="badge"></span>
+    <a href="lrc.html" class="btn" style="margin-left:auto" target="ktv-lrc">📝 MP3 → LRC 歌詞時間軸產生器</a>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <!-- 1. 音樂 -->
+      <div class="card">
+        <h2><span class="step">1</span>音樂（MP3）</h2>
+        <label class="drop" id="audioDrop">
+          <input type="file" id="audioInput" accept="audio/*,.mp3" hidden>
+          <span id="audioLabel">點擊或拖曳 MP3 檔案到這裡</span>
+        </label>
+        <div class="grid2">
+          <label>歌名<input type="text" id="songTitle" placeholder="（選填）"></label>
+          <label>歌手<input type="text" id="songArtist" placeholder="（選填）"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="showTitleIntro" checked> 前奏時在畫面中央顯示歌名／歌手</label>
+      </div>
+
+      <!-- 2. 背景 -->
+      <div class="card">
+        <h2><span class="step">2</span>背景</h2>
+        <div class="seg" id="bgMode">
+          <button type="button" data-mode="none" class="active">無</button>
+          <button type="button" data-mode="images">圖片</button>
+          <button type="button" data-mode="video">影片</button>
+        </div>
+
+        <div class="bg-panel" data-panel="none">
+          <p class="hint">純色背景，可以在下方挑顏色。</p>
+        </div>
+
+        <div class="bg-panel hidden" data-panel="images">
+          <label class="drop" id="imageDrop">
+            <input type="file" id="imageInput" accept="image/*" multiple hidden>
+            <span>點擊或拖曳圖片（可一次選多張）</span>
+          </label>
+          <div class="grid2">
+            <label>圖片顯示方式
+              <select id="imageFit">
+                <option value="cover">填滿畫面（會裁切）</option>
+                <option value="contain">完整顯示（留邊）</option>
+                <option value="blur" selected>完整顯示＋模糊背景</option>
+              </select>
+            </label>
+            <label>時間分配
+              <select id="imageTiming">
+                <option value="auto">平均分配到整首歌</option>
+                <option value="manual">每張自訂秒數（不夠長會循環）</option>
+              </select>
+            </label>
+          </div>
+          <div class="bulk">
+            <span>一次套用到全部：</span>
+            <select id="bulkTrans"></select>
+            <input type="number" id="bulkTransDur" value="1" min="0.1" max="10" step="0.1" title="轉場秒數">
+            <span>秒</span>
+            <select id="bulkMotion"></select>
+            <button type="button" id="bulkApply">套用</button>
+          </div>
+          <ul id="imageList" class="image-list"></ul>
+          <p class="hint">可以拖曳清單排序。轉場是「進入這張圖片時」的效果。</p>
+        </div>
+
+        <div class="bg-panel hidden" data-panel="video">
+          <label class="drop" id="videoDrop">
+            <input type="file" id="videoInput" accept="video/*" hidden>
+            <span id="videoLabel">點擊或拖曳背景影片（影片原本的聲音會自動移除）</span>
+          </label>
+          <div class="grid2">
+            <label>影片顯示方式
+              <select id="videoFit">
+                <option value="cover">填滿畫面（會裁切）</option>
+                <option value="contain">完整顯示（留邊）</option>
+                <option value="blur">完整顯示＋模糊背景</option>
+              </select>
+            </label>
+            <label class="check inline"><input type="checkbox" id="videoLoop" checked> 影片比歌短時循環播放</label>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <label>背景顏色<input type="color" id="bgColor" value="#000000"></label>
+          <label>背景變暗 <output data-for="bgDim"></output><input type="range" id="bgDim" min="0" max="80" value="0"></label>
+        </div>
+      </div>
+
+      <!-- 3. 歌詞 -->
+      <div class="card">
+        <h2><span class="step">3</span>歌詞</h2>
+        <p class="hint">支援 LRC 格式（每行前面有 <code>[分:秒]</code>）。沒有時間軸的純文字歌詞，可以用「打點對時工具」邊聽邊按空白鍵完成。</p>
+        <textarea id="lyricsInput" rows="10" spellcheck="false" placeholder="[ti:歌名]
+[ar:歌手]
+[00:12.00]第一句歌詞
+[00:16.50]第二句歌詞
+[00:21.00]
+↑ 只有時間沒有字＝這句唱完（間奏）
+
+逐字 KTV（更精準，可選）：
+[00:25.00]<00:25.00>我<00:25.40>愛<00:25.90>你<00:26.80>"></textarea>
+        <div class="btns">
+          <button type="button" id="openTapper" class="accent">🎯 打點對時工具</button>
+          <label class="btn">📂 匯入 .lrc<input type="file" id="lrcInput" accept=".lrc,.txt,text/plain" hidden></label>
+          <button type="button" id="exportLrc">💾 下載 .lrc</button>
+        </div>
+        <div id="lyricsStatus" class="hint"></div>
+
+        <details class="sub" open>
+          <summary>歌詞樣式</summary>
+          <div class="grid2">
+            <label>顯示方式
+              <select id="lyricLayout">
+                <option value="ktv">KTV 雙行（左上／右下交替）</option>
+                <option value="center">置中（目前這句＋下一句）</option>
+              </select>
+            </label>
+            <label>字體
+              <select id="fontFamily">
+                <option value='"PingFang TC","Heiti TC","Microsoft JhengHei","Noto Sans TC",sans-serif'>黑體</option>
+                <option value='"Yuanti TC","jf-openhuninn","Microsoft JhengHei",sans-serif'>圓體</option>
+                <option value='"Songti TC","PMingLiU","Noto Serif TC",serif'>明體</option>
+                <option value='"Kaiti TC","BiauKai","DFKai-SB",serif'>楷體</option>
+              </select>
+            </label>
+            <label>字體大小 <output data-for="fontSize"></output><input type="range" id="fontSize" min="30" max="140" value="72"></label>
+            <label>外框粗細 <output data-for="strokeWidth"></output><input type="range" id="strokeWidth" min="0" max="12" value="5"></label>
+            <label>未唱文字<input type="color" id="colorBase" value="#ffffff"></label>
+            <label>未唱外框<input type="color" id="colorBaseStroke" value="#1a1a1a"></label>
+            <label>已唱文字<input type="color" id="colorSung" value="#2f7dff"></label>
+            <label>已唱外框<input type="color" id="colorSungStroke" value="#ffffff"></label>
+            <label>離底部距離 <output data-for="marginBottom"></output><input type="range" id="marginBottom" min="2" max="60" value="8"></label>
+            <label>歌詞時間微調（秒，正數＝延後）<input type="number" id="lyricOffset" step="0.1" value="0"></label>
+          </div>
+          <div class="presets">
+            <span>配色快選：</span>
+            <button type="button" data-preset="blue">經典藍</button>
+            <button type="button" data-preset="pink">粉紅</button>
+            <button type="button" data-preset="gold">金黃</button>
+            <button type="button" data-preset="green">翠綠</button>
+          </div>
+          <label class="check"><input type="checkbox" id="fontBold" checked> 粗體</label>
+          <label class="check"><input type="checkbox" id="lyricShade" checked> 歌詞區域加暗色漸層（讓字更清楚）</label>
+        </details>
+      </div>
+
+      <!-- 4. 輸出 -->
+      <div class="card">
+        <h2><span class="step">4</span>輸出</h2>
+        <div class="grid3">
+          <label>解析度
+            <select id="resolution">
+              <option value="1920x1080">1920×1080（橫式 1080p）</option>
+              <option value="1280x720">1280×720（橫式 720p）</option>
+              <option value="1080x1920">1080×1920（直式／短影音）</option>
+              <option value="1080x1080">1080×1080（正方形）</option>
+            </select>
+          </label>
+          <label>影格率
+            <select id="fps">
+              <option value="30">30 fps</option>
+              <option value="60">60 fps</option>
+              <option value="24">24 fps</option>
+            </select>
+          </label>
+          <label>畫質
+            <select id="bitrate">
+              <option value="8">高（8 Mbps）</option>
+              <option value="4">中（4 Mbps）</option>
+              <option value="14">極高（14 Mbps）</option>
+            </select>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="muteMonitor"> 輸出時喇叭靜音（不影響影片聲音）</label>
+        <div class="btns">
+          <button type="button" id="exportBtn" class="primary">🎬 開始輸出影片</button>
+          <button type="button" id="cancelBtn" class="danger hidden">取消</button>
+        </div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <div id="exportStatus" class="hint"></div>
+        <a id="downloadLink" class="primary btn hidden">⬇ 下載影片</a>
+      </div>
+    </section>
+
+    <section class="preview">
+      <div class="canvas-wrap"><canvas id="canvas" width="1920" height="1080"></canvas></div>
+      <div class="player">
+        <button type="button" id="playBtn" title="播放／暫停（空白鍵）">▶</button>
+        <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+        <span id="timeLabel">00:00 / 00:00</span>
+      </div>
+      <p class="hint">輸出是「即時錄製」：會從頭完整播放一次歌曲，所需時間等於歌曲長度。輸出期間請讓這個分頁保持在前景，不要切換分頁或縮小視窗。</p>
+    </section>
+  </main>
+
+  <!-- 打點對時 -->
+  <div id="tapper" class="modal hidden">
+    <div class="modal-box">
+      <h3>🎯 打點對時工具</h3>
+      <ol class="hint steps">
+        <li>在下面貼上純文字歌詞（一行一句）。</li>
+        <li>按「開始」，音樂會從頭播放。</li>
+        <li>每一句<b>開始唱</b>的瞬間按 <kbd>空白鍵</kbd>；一句唱完後如果接著是間奏，按 <kbd>X</kbd> 讓歌詞先消失；按錯按 <kbd>Z</kbd> 復原（會倒退 3 秒）。</li>
+        <li>完成後按「套用」。</li>
+      </ol>
+      <textarea id="tapText" rows="7" spellcheck="false" placeholder="一行一句歌詞"></textarea>
+      <div class="tap-now">
+        <div id="tapPrev" class="tap-line dim"></div>
+        <div id="tapCur" class="tap-line cur"></div>
+        <div id="tapNext" class="tap-line dim"></div>
+      </div>
+      <div id="tapInfo" class="hint"></div>
+      <div class="btns">
+        <button type="button" id="tapStart">▶ 開始（從頭）</button>
+        <button type="button" id="tapHit" class="primary">打點（空白鍵）</button>
+        <button type="button" id="tapGap">句尾／間奏（X）</button>
+        <button type="button" id="tapUndo">復原（Z）</button>
+      </div>
+      <div class="btns">
+        <button type="button" id="tapEven">不想打點：平均分配時間</button>
+        <span class="spacer"></span>
+        <button type="button" id="tapClose">關閉</button>
+        <button type="button" id="tapDone" class="accent">✔ 套用</button>
+      </div>
+    </div>
+  </div>
+
+  <audio id="audio" preload="auto"></audio>
+  <video id="bgVideo" muted playsinline preload="auto"></video>
+
+  <script src="app.js"></script>
+</body>
+</html>

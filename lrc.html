@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MP3 → LRC｜歌詞時間軸產生器</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="lrc.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>📝 MP3 → LRC · 歌詞時間軸產生器</h1>
+    <nav class="nav">
+      <a href="index.html" class="btn">🎤 MP4 製作頁</a>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <!-- 1. MP3 -->
+      <div class="card">
+        <h2><span class="step">1</span>放入 MP3</h2>
+        <label class="drop" id="audioDrop">
+          <input type="file" id="audioInput" accept="audio/*,.mp3" hidden>
+          <span id="audioLabel">點擊或拖曳 MP3 檔案到這裡</span>
+        </label>
+        <div class="grid2">
+          <label>歌名<input type="text" id="songTitle" placeholder="（選填）"></label>
+          <label>歌手<input type="text" id="songArtist" placeholder="（選填）"></label>
+        </div>
+        <div id="id3Status" class="hint"></div>
+      </div>
+
+      <!-- 2. 取得歌詞 -->
+      <div class="card">
+        <h2><span class="step">2</span>取得歌詞</h2>
+        <div class="seg" id="srcMode">
+          <button type="button" data-mode="ai" class="active">🤖 AI 聽歌辨識</button>
+          <button type="button" data-mode="paste">📋 貼上歌詞再對時</button>
+        </div>
+
+        <div class="src-panel" data-panel="ai">
+          <p class="hint">在瀏覽器裡用 Whisper 語音辨識模型「聽」歌曲，自動產生每句的 <code>[分:秒]</code>。檔案不會上傳到任何伺服器；第一次使用需要下載模型。</p>
+          <div class="grid2">
+            <label>語言
+              <select id="aiLang">
+                <option value="chinese">中文</option>
+                <option value="english">英文</option>
+                <option value="japanese">日文</option>
+                <option value="korean">韓文</option>
+                <option value="">自動偵測</option>
+              </select>
+            </label>
+            <label>模型（越大越準、越慢）
+              <select id="aiModel">
+                <option value="onnx-community/whisper-tiny">極小（約 40 MB，最快）</option>
+                <option value="onnx-community/whisper-base" selected>小（約 80 MB）</option>
+                <option value="onnx-community/whisper-small">中（約 250 MB，較準）</option>
+                <option value="onnx-community/whisper-large-v3-turbo">大（約 800 MB，最準，建議有 GPU）</option>
+              </select>
+            </label>
+          </div>
+          <label class="check"><input type="checkbox" id="aiS2T" checked> 中文自動轉成繁體</label>
+          <label class="check"><input type="checkbox" id="aiSplit" checked> 太長的句子自動切開（每句最多 <input type="number" id="aiMaxLen" value="14" min="4" max="40" class="mini"> 字）</label>
+          <label class="check"><input type="checkbox" id="aiPunct" checked> 移除標點符號</label>
+          <label class="check"><input type="checkbox" id="aiFilter" checked> 過濾 AI 常見的亂入字（例如「字幕由…提供」「請訂閱」）</label>
+          <label class="check"><input type="checkbox" id="aiGap" checked> 句子之間空檔超過 <input type="number" id="aiGapSec" value="2.5" min="0.5" max="20" step="0.5" class="mini"> 秒就加上「句尾」標記（間奏時歌詞會先消失）</label>
+          <div class="btns">
+            <button type="button" id="aiRun" class="primary">🤖 開始辨識</button>
+          </div>
+          <div class="progress"><div id="aiBar"></div></div>
+          <div id="aiStatus" class="hint"></div>
+          <div id="aiPartial" class="partial hidden"></div>
+          <p class="hint">💡 有伴奏的歌曲，AI 可能聽錯字或漏句，辨識完請在右邊檢查修正。若有正確的歌詞，可以改用「貼上歌詞再對時」，準確度最高。</p>
+        </div>
+
+        <div class="src-panel hidden" data-panel="paste">
+          <p class="hint">貼上正確的歌詞（一行一句），按「放進編輯區」，再用右邊的「🎯 依序打點」邊聽邊按空白鍵，替每一句填上時間。</p>
+          <textarea id="pasteText" rows="10" spellcheck="false" placeholder="一行一句歌詞"></textarea>
+          <div class="btns">
+            <button type="button" id="pasteApply" class="primary">放進編輯區</button>
+            <button type="button" id="pasteEven">放進去並平均分配時間</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="preview editor">
+      <div class="card">
+        <h2><span class="step">3</span>檢查與修正時間軸</h2>
+        <div class="player">
+          <button type="button" id="playBtn" title="播放／暫停">▶</button>
+          <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+          <span id="timeLabel">00:00.00 / 00:00</span>
+        </div>
+        <div class="btns">
+          <button type="button" id="tapBtn" class="accent">🎯 依序打點</button>
+          <button type="button" id="addRow">＋ 新增一句</button>
+          <button type="button" id="addGap">＋ 句尾標記</button>
+          <button type="button" id="sortRows">依時間排序</button>
+          <button type="button" id="shiftAll">整體平移…</button>
+          <button type="button" id="clearRows" class="danger">清空</button>
+        </div>
+        <div id="tapBar" class="tapbar hidden">
+          打點中：每一句<b>開始唱</b>時按 <kbd>空白鍵</kbd>，按錯按 <kbd>Z</kbd> 復原（倒退 3 秒），按 <kbd>Esc</kbd> 結束。
+          <span id="tapProgress"></span>
+        </div>
+        <div class="rows-head">
+          <span>時間 [分:秒]</span><span>歌詞（空白＝句尾／間奏標記）</span><span></span>
+        </div>
+        <div id="rows" class="rows"></div>
+        <p id="rowsEmpty" class="hint">還沒有歌詞。請先在左邊用 AI 辨識、貼上歌詞，或讀取 MP3 內嵌的歌詞。</p>
+      </div>
+
+      <div class="card">
+        <h2><span class="step">4</span>輸出 .lrc</h2>
+        <p class="hint">格式和「MP4 製作頁」第 3 步的歌詞欄完全相容：<code>[ti:歌名]</code> <code>[ar:歌手]</code> <code>[分:秒.百分秒]歌詞</code>，只有時間沒有字的行代表句尾。</p>
+        <textarea id="lrcOut" rows="10" spellcheck="false" readonly></textarea>
+        <div id="lrcWarn" class="hint"></div>
+        <div class="btns">
+          <button type="button" id="downloadLrc" class="primary">💾 下載 .lrc</button>
+          <button type="button" id="copyLrc">📋 複製</button>
+          <button type="button" id="sendToMp4" class="accent">➡ 送到 MP4 製作頁</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <audio id="audio" preload="auto"></audio>
+  <script src="lrc.js"></script>
+</body>
+</html>

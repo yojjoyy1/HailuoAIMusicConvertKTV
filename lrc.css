@@ -1,0 +1,55 @@
+.nav { margin-left: auto; display: flex; gap: 8px; }
+
+.layout { grid-template-columns: minmax(360px, 480px) 1fr; }
+.editor { gap: 16px; }
+
+input.mini { width: 56px; padding: 2px 6px; display: inline-block; }
+label.check input.mini { margin: 0 2px; }
+
+.src-panel { display: flex; flex-direction: column; gap: 10px; }
+
+#aiBar { height: 100%; width: 0; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width .2s; }
+#aiBar.indeterminate { width: 30%; animation: slide 1.2s infinite ease-in-out; }
+@keyframes slide { 0% { margin-left: -30%; } 100% { margin-left: 100%; } }
+
+.partial {
+  background: var(--card2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.tapbar {
+  background: rgba(255, 79, 139, .12);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+#tapProgress { margin-left: 8px; color: var(--accent); font-weight: 600; }
+
+.rows-head, .row {
+  display: grid;
+  grid-template-columns: 150px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.rows-head { color: var(--muted); font-size: 12px; padding: 0 8px; }
+.rows { display: flex; flex-direction: column; gap: 4px; max-height: 52vh; overflow: auto; padding-right: 4px; }
+.row { padding: 4px 8px; border-radius: 8px; border: 1px solid transparent; }
+.row:hover { background: var(--card2); }
+.row.current { border-color: var(--accent); background: rgba(255, 79, 139, .08); }
+.row.next-tap { border-color: var(--primary); border-style: dashed; }
+.row.gap input.text { color: var(--muted); font-style: italic; }
+.row.bad input.time { border-color: #fbbf5a; }
+.row input { padding: 5px 8px; min-width: 0; }
+.row input.time { font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+.time-cell { display: flex; gap: 2px; }
+.time-cell button { padding: 2px 5px; font-size: 11px; }
+.row-ops { display: flex; gap: 2px; }
+.row-ops button { padding: 3px 7px; font-size: 12px; }
+
+#timeLabel { min-width: 130px; }
